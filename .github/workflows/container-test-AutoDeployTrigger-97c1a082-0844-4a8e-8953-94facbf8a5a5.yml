@@ -1,0 +1,48 @@
+name: Trigger auto deployment for container-test
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/container-test-AutoDeployTrigger-97c1a082-0844-4a8e-8953-94facbf8a5a5.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.CONTAINERTEST_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CONTAINERTEST_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CONTAINERTEST_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: rashmicontainerregistrytest.azurecr.io
+          registryUsername: ${{ secrets.CONTAINERTEST_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.CONTAINERTEST_REGISTRY_PASSWORD }}
+          containerAppName: container-test
+          resourceGroup: Rashmi
+          imageToBuild: rashmicontainerregistrytest.azurecr.io/container-test:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
